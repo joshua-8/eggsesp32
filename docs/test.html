@@ -1,0 +1,22 @@
+ <script>
+function gotSomething(response){
+	console.log(JSON.stringify(response))
+	document.getElementById("stuff").innerHTML=JSON.stringify(response)
+}
+setInterval(function() {
+
+fetch('https://esp32-a2dff8.devices.brown.edu/eggs', {
+    method: 'GET',
+    headers: {
+        'Accept': 'application/json',
+    },
+})
+   .then(response => response.json())
+   .then(response => gotSomething(response))
+    
+}, 1000);
+
+</script> 
+<html>
+<div id="stuff"></div>
+</html>
