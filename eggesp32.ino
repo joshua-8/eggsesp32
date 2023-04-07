@@ -1,16 +1,16 @@
 /**
-   This program hosts an API that returns the number of eggs that have passed a beam break sensor.
-   at ipaddress:80/eggs
    v1.0 by Joshua Phelps 2023-04-07
 */
+
 #include <WiFi.h>
-#include <WiFiClient.h>
-#include <WebServer.h>
-#include <ESPmDNS.h>
+#include <WiFiMulti.h>
+
+WiFiMulti WiFiMulti;
+#include <HTTPClient.h>
+
+const char* serverName = "https://api.restful-api.dev/objects";
 
 const char* ssid = "Brown-Guest";
-
-WebServer server(80);
 
 byte beamBreakPin = 0;
 byte LED_BUILTIN = 2;
@@ -18,53 +18,74 @@ byte LED_BUILTIN = 2;
 int numEggs = 0;
 boolean lastBeamBreakState = HIGH;
 
-void handleRoot() {
-  digitalWrite(LED_BUILTIN, HIGH);
-  char msg[50];
-  sprintf(msg, "{\"numEggs\":%d}", numEggs);
-  server.send(200, "application/json", msg);
-  digitalWrite(LED_BUILTIN, LOW);
-}
 
 
 void setup(void) {
   pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(beamBreakPin,INPUT_PULLUP);
+  pinMode(beamBreakPin, INPUT_PULLUP);
   digitalWrite(LED_BUILTIN, HIGH);
   Serial.begin(115200);
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid);
-  Serial.println("");
+  delay(10);
 
-  // Wait for connection
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+  // We start by connecting to a WiFi network
+  WiFiMulti.addAP(ssid);
+
+  Serial.println();
+  Serial.println();
+  Serial.print("Waiting for WiFi... ");
+
+  while (WiFiMulti.run() != WL_CONNECTED) {
     Serial.print(".");
+    delay(500);
   }
+
   Serial.println("");
-  Serial.print("Connected to ");
-  Serial.println(ssid);
-  Serial.print("IP address: ");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+
+  delay(500);
   Serial.println(WiFi.macAddress());
 
-  if (MDNS.begin("eggsp32")) {
-    Serial.println("MDNS responder started");
-  }
+  digitalWrite(LED_BUILTIN, LOW);
 
-  server.on("/eggs", handleRoot);
-
-  server.begin();
-  Serial.println("HTTP server started");
+  Serial.println("started");
 }
 
 void loop(void) {
   boolean beamBreakState = digitalRead(beamBreakPin);
   if (beamBreakState == LOW && beamBreakState != lastBeamBreakState) {
     numEggs++;
+    digitalWrite(LED_BUILTIN, HIGH);
+
+
+
+    //Check WiFi connection status
+    if (WiFi.status() == WL_CONNECTED) {
+      WiFiClient client;
+      HTTPClient http;
+
+      // Your Domain name with URL path or IP address with path
+      http.begin(client, serverName);
+
+      http.addHeader("Content-Type", "application/json");
+      int httpResponseCode = http.POST("{\"numEggs\":" + String(numEggs) + "}");
+
+      Serial.print("HTTP Response code: ");
+      Serial.println(httpResponseCode);
+
+      // Free resources
+      http.end();
+    }
+    else {
+      Serial.println("WiFi Disconnected");
+    }
+
+    Serial.println(numEggs);
+    digitalWrite(LED_BUILTIN, LOW);
+
   }
   lastBeamBreakState = beamBreakState;
-  server.handleClient();
-  Serial.println(numEggs);
-  delay(5);//allow the cpu to switch to other tasks
+
+  delay(5);
 }
