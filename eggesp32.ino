@@ -43,8 +43,8 @@ void setup(void) {
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(beamBreakPin, INPUT_PULLUP);
   digitalWrite(LED_BUILTIN, HIGH);
-  pinMode(21, OUTPUT);
-  pinMode(22, OUTPUT);
+  pinMode(21, OUTPUT); // SDA ADD PULL UP RESISTOR!
+  pinMode(22, OUTPUT); // SCL ADD PULL UP RESISTOR!
   Serial.begin(115200);
   matrix.begin(0x70);
 
